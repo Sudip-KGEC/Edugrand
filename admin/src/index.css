@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #ff6a00;
+  --color-brand-dark: #e85d00;
+  --color-brand-light: #ff9a3c;
+  --color-brand-soft: #fff3e8;
+  --color-ink: #0b0b0c;
+  --color-ink-soft: #17171a;
+  --color-muted: #5f5f68;
+  --color-line: #ececef;
+  --color-mist: #faf8f6;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  background: var(--color-mist);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.bg-brand-gradient {
+  background: linear-gradient(135deg, #ff9a3c 0%, #ff6a00 55%, #ee4d00 100%);
+}
+
+.text-brand-gradient {
+  background: linear-gradient(120deg, #ff9a3c, #ee4d00);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.field {
+  width: 100%;
+  border-radius: 0.875rem;
+  background: #fff;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.9rem;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  outline: none;
+  transition: box-shadow 0.15s;
+}
+.field:focus {
+  box-shadow: inset 0 0 0 2px var(--color-brand);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #ff9a3c 0%, #ff6a00 55%, #ee4d00 100%);
+  box-shadow: 0 10px 22px -10px rgba(255, 106, 0, 0.7);
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.btn-dark {
+  color: #fff;
+  background: var(--color-ink);
+}
+.btn-outline {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+.btn-outline:hover {
+  box-shadow: inset 0 0 0 1px var(--color-brand);
+  color: var(--color-brand);
+}
+.btn-danger {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+.btn-danger:hover {
+  background: #fee2e2;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fade-up 0.4s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up {
+    animation: none;
+  }
+}

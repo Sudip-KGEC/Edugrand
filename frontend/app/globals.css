@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-brand: #ff6a00;
+  --color-brand-dark: #e85d00;
+  --color-brand-light: #ff9a3c;
+  --color-brand-soft: #fff3e8;
+  --color-brand-tint: #ffe3cc;
+  --color-ink: #0b0b0c;
+  --color-ink-soft: #17171a;
+  --color-muted: #5f5f68;
+  --color-line: #ececef;
+  --color-mist: #faf8f6;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-card: 0 1px 2px rgba(11, 11, 12, 0.04), 0 12px 32px -16px rgba(11, 11, 12, 0.14);
+  --shadow-lift: 0 2px 4px rgba(11, 11, 12, 0.04), 0 28px 48px -20px rgba(255, 106, 0, 0.35);
+  --shadow-glow: 0 14px 30px -12px rgba(255, 106, 0, 0.65);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem;
+}
+
+body {
+  background: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.bg-brand-gradient {
+  background: linear-gradient(135deg, #ff9a3c 0%, #ff6a00 55%, #ee4d00 100%);
+}
+
+.text-brand-gradient {
+  background: linear-gradient(120deg, #ff9a3c 0%, #ff6a00 50%, #ee4d00 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-hero {
+  background:
+    radial-gradient(48rem 28rem at 88% -8%, rgba(255, 138, 31, 0.28), transparent 70%),
+    radial-gradient(36rem 24rem at -4% 30%, rgba(255, 106, 0, 0.14), transparent 70%),
+    linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
+}
+
+.bg-dark {
+  background:
+    radial-gradient(40rem 22rem at 100% 0%, rgba(255, 106, 0, 0.42), transparent 70%),
+    radial-gradient(28rem 20rem at 0% 100%, rgba(255, 154, 60, 0.18), transparent 70%),
+    var(--color-ink);
+}
+
+.grid-pattern {
+  background-image:
+    linear-gradient(to right, rgba(11, 11, 12, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 11, 12, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at 70% 20%, #000 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at 70% 20%, #000 0%, transparent 70%);
+}
+
+.js [data-reveal]:not(.is-in),
+.js [data-hero]:not(.is-in) {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details[open] .faq-icon {
+  transform: rotate(45deg);
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f3f1ee 25%, #fbf9f7 37%, #f3f1ee 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .skeleton {
+    animation: none;
+  }
+}
