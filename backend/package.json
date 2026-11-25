@@ -3,13 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "22.x" },
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "seed": "node src/seed/seed.js"
   },
   "dependencies": {
+    "@google/genai": "^3.6.1",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.5",
     "cors": "^2.8.5",

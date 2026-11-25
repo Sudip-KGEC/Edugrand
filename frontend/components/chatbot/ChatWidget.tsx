@@ -29,12 +29,16 @@ export function ChatWidget() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (loading) return;
-    send(input);
-    setInput("");
-  }
+  async function submit(event: React.FormEvent) {
+  event.preventDefault();
+
+  const message = input.trim();
+
+  if (!message || loading) return;
+
+  setInput("");
+  await send(message);
+}
 
   return (
     <div className="fixed bottom-5 right-5 z-50 sm:bottom-6 sm:right-6">

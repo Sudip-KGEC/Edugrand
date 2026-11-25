@@ -52,16 +52,17 @@ export const newsletterBody = z.object({
   email: z.string().trim().toLowerCase().email(),
 });
 
+
 export const chatBody = z.object({
-  message: z.string().trim().min(1).max(300),
+  message: z.string().trim().min(1, "Message is required").max(500, "Message is too long"),
   history: z
     .array(
       z.object({
         role: z.enum(["user", "bot"]),
-        text: z.string().trim().min(1).max(600),
+        text: z.string().max(600),
       }),
     )
-    .max(10)
+    .max(8)
     .default([]),
 });
 

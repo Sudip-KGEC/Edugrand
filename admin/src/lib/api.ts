@@ -1,7 +1,6 @@
 
 const BASE_URL = (
-  import.meta.env.VITE_BACKEND_API_URL ||
-  "http://localhost:5000/api"
+  import.meta.env.VITE_BACKEND_API_URL
 ).replace(/\/$/, "");
 
 const TOKEN_KEY = "edugrand_admin_token";

@@ -49,6 +49,6 @@ export type ChatResult = Pick<Scholarship, "_id" | "title" | "slug" | "amountLab
 
 export type ChatReply = {
   reply: string;
-  suggestions: string[];
-  scholarships: ChatResult[];
+  suggestions?: string[];
+  scholarships?: ChatResult[];
 };

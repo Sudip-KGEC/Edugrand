@@ -16,8 +16,7 @@ export const env = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
 
   clientOrigins: list(
-    process.env.CLIENT_ORIGINS,
-    "http://localhost:3000,http://localhost:5173,https://edugrand.vercel.app"
+    process.env.CLIENT_ORIGINS
   ),
 
   adminEmail: process.env.ADMIN_EMAIL || "",

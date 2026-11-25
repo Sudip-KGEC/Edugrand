@@ -1,161 +1,64 @@
-import { Scholarship } from "../models/Scholarship.js";
-import { CATEGORIES, LEVELS } from "../models/constants.js";
-import { env } from "../config/env.js";
-import { escapeRegex } from "../utils/slugify.js";
-import { generateReply } from "./gemini.service.js";
+import { GoogleGenAI } from "@google/genai";
+import { ApiError } from "../utils/ApiError.js";
 
-const LEVEL_WORDS = {
-  School: ["school", "class 10", "class 12", "10th", "12th", "secondary", "high school"],
-  Diploma: ["diploma", "polytechnic", "iti", "vocational"],
-  Undergraduate: ["undergraduate", "bachelor", "btech", "b.tech", "bsc", "b.sc", "ba ", "bcom", "degree", "ug "],
-  Postgraduate: ["postgraduate", "master", "mtech", "m.tech", "msc", "mba", "pg "],
-  PhD: ["phd", "doctoral", "doctorate", "research scholar"],
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// primary model first, then fallbacks (comma separated in .env)
+const models = [
+  process.env.GEMINI_MODEL,
+  ...(process.env.GEMINI_FALLBACK_MODELS || "").split(","),
+]
+  .map((m) => m?.trim())
+  .filter(Boolean);
+
+const SYSTEM_PROMPT = `You are the assistant for a scholarship portal.
+Reply in plain text, maximum 2 short sentences and 30 words. Never use lists, headings, markdown or emojis.
+Give the direct answer first. No introductions, no filler, no repeating the question.
+Help only with scholarship eligibility, deadlines, documents and how to apply.
+If the user greets you, greet back in one short sentence and ask what they want to know.
+If the message is gibberish or unrelated to scholarships or education, reply only: "Sorry, I didn't get that. Ask me about scholarships."
+If unsure about a specific deadline or amount, say so and point to the scholarship's official page.`;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const isBusy = (err) => err.status === 503 || err.status === 429;
+
+
+const shorten = (text) => {
+  const clean = text.replace(/[*#_`]/g, "").replace(/\s+/g, " ").trim();
+  const sentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
+  return sentences.slice(0, 2).join(" ").trim();
 };
 
-const CATEGORY_WORDS = {
-  Merit: ["merit", "topper", "marks", "academic"],
-  "Need-based": ["need", "income", "poor", "financial", "low income"],
-  Women: ["women", "woman", "girl", "female"],
-  Minority: ["minority", "sc", "st", "obc", "tribal"],
-  Sports: ["sport", "athlete", "athletics"],
-  Research: ["research", "fellowship"],
-  Government: ["government", "govt", "state", "central"],
-  International: ["abroad", "international", "overseas", "foreign"],
-  STEM: ["stem", "engineering", "science", "technology", "math", "computer"],
-};
+export const answer = async (message, history = []) => {
+  const contents = [
+    ...history.slice(-4).map((t) => ({
+      role: t.role === "bot" ? "model" : "user",
+      parts: [{ text: t.text }],
+    })),
+    { role: "user", parts: [{ text: message }] },
+  ];
 
-const COUNTRIES = ["India", "USA", "UK", "Canada", "Germany", "Australia", "Global"];
-
-const STOPWORDS = new Set([
-  "the", "and", "for", "with", "any", "are", "there", "show", "find", "me", "i", "a", "an", "of", "to", "in", "on",
-  "scholarship", "scholarships", "need", "want", "looking", "get", "can", "what", "which", "that", "have", "please",
-]);
-
-const SUGGESTIONS = ["Closing soon", "Undergraduate scholarships", "Scholarships for women", "How do I apply?"];
-
-const cardFields = "title slug amountLabel deadline level country category";
-const contextFields = `${cardFields} provider summary eligibility benefits`;
-
-const has = (text, words) => words.some((word) => text.includes(word));
-
-function reply(message, extra = {}) {
-  return { reply: message, suggestions: SUGGESTIONS, scholarships: [], ...extra };
-}
-
-function openFilter(extra = {}) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return { status: "active", deadline: { $gte: today }, ...extra };
-}
-
-function detect(text) {
-  const levels = LEVELS.filter((level) => has(text, LEVEL_WORDS[level] || []));
-  const categories = CATEGORIES.filter((category) => has(text, CATEGORY_WORDS[category] || []));
-  const countries = COUNTRIES.filter((country) => text.includes(country.toLowerCase()));
-  return { levels, categories, countries };
-}
-
-async function retrieve(text, fields, limit) {
-  const { levels, categories, countries } = detect(text);
-  const filter = openFilter();
-  if (levels.length) filter.level = { $in: levels };
-  if (categories.length) filter.category = { $in: categories };
-  if (countries.length) filter.country = { $in: countries };
-
-  let matched = Boolean(levels.length || categories.length || countries.length);
-  if (!matched) {
-    const words = text
-      .split(/[^a-z0-9]+/)
-      .filter((word) => word.length > 2 && !STOPWORDS.has(word))
-      .slice(0, 5);
-    if (words.length) {
-      filter.$or = words.flatMap((word) => {
-        const pattern = new RegExp(escapeRegex(word), "i");
-        return [{ title: pattern }, { provider: pattern }, { summary: pattern }];
-      });
-      matched = true;
+  for (const model of models) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const res = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+            maxOutputTokens: 1000,
+            temperature: 0.2,
+          },
+        });
+        if (res.text) return { reply: shorten(res.text) };
+        break; // empty reply: next model
+      } catch (err) {
+        console.error(`Gemini failed on ${model} (try ${attempt}):`, err.message);
+        if (!isBusy(err) || attempt === 2) break;
+        await sleep(400);
+      }
     }
   }
 
-  let items = matched ? await Scholarship.find(filter, fields).sort({ deadline: 1 }).limit(limit).lean() : [];
-  if (!items.length) {
-    matched = false;
-    items = await Scholarship.find(openFilter(), fields).sort({ deadline: 1 }).limit(limit).lean();
-  }
-  return { items, matched };
-}
-
-async function closingSoon() {
-  const items = await Scholarship.find(openFilter(), cardFields).sort({ deadline: 1 }).limit(4).lean();
-  if (!items.length) return reply("There are no open scholarships right now. Please check back soon.");
-  return reply("These scholarships have the nearest deadlines. Apply early to avoid last minute issues.", {
-    scholarships: items,
-  });
-}
-
-async function ruleAnswer(text) {
-  if (/^(hi|hello|hey|hii|namaste|good (morning|afternoon|evening))\b/.test(text)) {
-    return reply("Hi! I am the EduGrand assistant. Tell me your course level, country or category and I will find matching scholarships.");
-  }
-  if (has(text, ["deadline", "closing", "last date", "soon", "urgent", "expire"])) return closingSoon();
-  if (has(text, ["document", "certificate", "paper", "proof"])) {
-    return reply("Most scholarships ask for an ID proof, your latest mark sheets, an income certificate for need-based awards, a bank passbook and a passport size photo. Each scholarship page lists its exact documents.");
-  }
-  if (has(text, ["how to apply", "how do i apply", "apply", "application", "process"])) {
-    return reply("Applying is simple: 1) Find a scholarship and check eligibility. 2) Keep your documents ready. 3) Press Apply Now on the scholarship page to reach the official application. 4) Submit before the deadline and save your acknowledgement.");
-  }
-  if (has(text, ["eligib", "qualify", "who can"])) {
-    return reply("Eligibility depends on the scholarship. It usually covers your course level, marks, family income, category and country. Open any scholarship page to see its exact criteria, or tell me your profile and I will suggest matches.");
-  }
-  if (has(text, ["contact", "support", "human", "email", "help desk"])) {
-    return reply("You can reach our team from the Contact page and we usually reply within two working days.");
-  }
-  if (has(text, ["free", "cost", "fee", "charge", "price"])) {
-    return reply("EduGrand is free for students. We never charge for browsing or applying. Be careful of anyone asking for money to give you a scholarship.");
-  }
-  if (has(text, ["thank", "thanks", "bye"])) {
-    return reply("You are welcome! Best of luck with your applications.");
-  }
-
-  const { items, matched } = await retrieve(text, cardFields, 4);
-  if (matched && items.length) {
-    return reply(`I found ${items.length} scholarship${items.length > 1 ? "s" : ""} that match. Open one to see eligibility and how to apply.`, {
-      scholarships: items,
-    });
-  }
-  return reply("I could not find an exact match. Try a level such as undergraduate or postgraduate, a country, or a category like women, merit or research.");
-}
-
-export async function answer(message, history = []) {
-  const text = message.toLowerCase().trim();
-
-  if (env.geminiApiKey) {
-    try {
-      const lastUser = [...history].reverse().find((turn) => turn.role === "user");
-      const short = text.split(/\s+/).length <= 4;
-      const searchText = short && lastUser ? `${lastUser.text.toLowerCase()} ${text}` : text;
-      const { items, matched } = await retrieve(searchText, contextFields, 6);
-      const result = await generateReply({ message, history, scholarships: items, matched });
-      return {
-        reply: result.reply,
-        suggestions: result.suggestions.length ? result.suggestions : SUGGESTIONS,
-        scholarships: result.showScholarships
-          ? items.slice(0, 3).map(({ _id, title, slug, amountLabel, deadline, level, country, category }) => ({
-              _id,
-              title,
-              slug,
-              amountLabel,
-              deadline,
-              level,
-              country,
-              category,
-            }))
-          : [],
-      };
-    } catch (error) {
-      console.error("Gemini unavailable, using rule based reply:", error.message);
-    }
-  }
-
-  return ruleAnswer(text);
-}
+  throw new ApiError(502, "Chat is unavailable right now, please try again");
+};
