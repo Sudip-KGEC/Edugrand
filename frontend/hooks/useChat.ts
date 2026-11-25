@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { askChatbot } from "@/services/chat.service";
+import { askChatbot, type ChatTurn } from "@/services/chat.service";
 import type { ChatResult } from "@/types";
 
 export type ChatMessage = {
@@ -24,6 +24,7 @@ export function useChat() {
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [loading, setLoading] = useState(false);
   const counter = useRef(1);
+  const turns = useRef<ChatTurn[]>([]);
   const controller = useRef<AbortController | null>(null);
 
   const send = useCallback(async (raw: string) => {
@@ -32,16 +33,21 @@ export function useChat() {
     controller.current?.abort();
     controller.current = new AbortController();
 
+    const history = turns.current.slice(-8);
     const userMessage: ChatMessage = { id: counter.current++, role: "user", text };
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
 
     try {
-      const data = await askChatbot(text, controller.current.signal);
+      const data = await askChatbot(text, history, controller.current.signal);
       setMessages((prev) => [
         ...prev,
         { id: counter.current++, role: "bot", text: data.reply, scholarships: data.scholarships },
       ]);
+      turns.current = [...history, { role: "user" as const, text }, { role: "bot" as const, text: data.reply }].map((turn) => ({
+        ...turn,
+        text: turn.text.slice(0, 600),
+      }));
       if (data.suggestions?.length) setSuggestions(data.suggestions);
     } catch (error) {
       if ((error as Error).name === "AbortError") return;

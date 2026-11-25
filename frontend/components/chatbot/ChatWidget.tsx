@@ -23,7 +23,8 @@ export function ChatWidget() {
   }, [open]);
 
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
+    const onKey = (event: KeyboardEvent) =>
+      event.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -49,24 +50,43 @@ export function ChatWidget() {
                 <Bot className="size-5" />
               </span>
               <div>
-                <p className="font-display text-sm font-bold">Scholarship assistant</p>
+                <p className="font-display text-sm font-bold">
+                  Scholarship assistant
+                </p>
                 <p className="flex items-center gap-1.5 text-xs text-white/70">
-                  <span className="size-1.5 rounded-full bg-emerald-400" /> Online
+                  <span className="size-1.5 rounded-full bg-emerald-400" />{" "}
+                  Online
                 </p>
               </div>
             </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close chat" className="grid size-8 place-items-center rounded-full hover:bg-white/10">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close chat"
+              className="grid size-8 place-items-center rounded-full hover:bg-white/10"
+            >
               <X className="size-4" />
             </button>
           </header>
 
-          <div className="flex-1 space-y-4 overflow-y-auto bg-mist px-4 py-4" aria-live="polite">
+          <div
+            className="flex-1 space-y-4 overflow-y-auto bg-mist px-4 py-4"
+            aria-live="polite"
+          >
             {messages.map((message) => (
-              <div key={message.id} className={cn("flex flex-col gap-2", message.role === "user" ? "items-end" : "items-start")}>
+              <div
+                key={message.id}
+                className={cn(
+                  "flex flex-col gap-2",
+                  message.role === "user" ? "items-end" : "items-start",
+                )}
+              >
                 <p
                   className={cn(
                     "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
-                    message.role === "user" ? "rounded-br-md bg-brand-gradient text-white" : "rounded-bl-md bg-white text-ink ring-1 ring-line",
+                    message.role === "user"
+                      ? "rounded-br-md bg-brand-gradient text-white"
+                      : "rounded-bl-md bg-white text-ink ring-1 ring-line",
                   )}
                 >
                   {message.text}
@@ -78,19 +98,31 @@ export function ChatWidget() {
                     onClick={() => setOpen(false)}
                     className="block w-[85%] rounded-2xl bg-white p-3.5 ring-1 ring-line transition hover:ring-brand"
                   >
-                    <p className="line-clamp-2 text-sm font-semibold text-ink">{item.title}</p>
-                    <p className="mt-1 text-sm font-bold text-brand">{item.amountLabel}</p>
+                    <p className="line-clamp-2 text-sm font-semibold text-ink">
+                      {item.title}
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-brand">
+                      {item.amountLabel}
+                    </p>
                     <p className="mt-1 text-xs text-muted">
-                      {item.level} · {item.country} · {deadlineLabel(item.deadline)}
+                      {item.level} · {item.country} ·{" "}
+                      {deadlineLabel(item.deadline)}
                     </p>
                   </Link>
                 ))}
               </div>
             ))}
             {loading ? (
-              <div className="flex w-16 gap-1.5 rounded-2xl rounded-bl-md bg-white px-4 py-3.5 ring-1 ring-line" aria-label="Assistant is typing">
+              <div
+                className="flex w-16 gap-1.5 rounded-2xl rounded-bl-md bg-white px-4 py-3.5 ring-1 ring-line"
+                aria-label="Assistant is typing"
+              >
                 {[0, 1, 2].map((dot) => (
-                  <span key={dot} className="size-2 animate-bounce rounded-full bg-brand" style={{ animationDelay: `${dot * 120}ms` }} />
+                  <span
+                    key={dot}
+                    className="size-2 animate-bounce rounded-full bg-brand"
+                    style={{ animationDelay: `${dot * 120}ms` }}
+                  />
                 ))}
               </div>
             ) : null}
@@ -135,6 +167,10 @@ export function ChatWidget() {
                 <ArrowUp className="size-5" />
               </button>
             </form>
+            <p className="mt-2 px-1 text-center text-[11px] leading-snug text-muted">
+              AI replies can be wrong. Confirm details on the official site. Do
+              not share personal data.
+            </p>
           </div>
         </section>
       ) : null}
@@ -143,7 +179,9 @@ export function ChatWidget() {
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        aria-label={open ? "Close scholarship assistant" : "Open scholarship assistant"}
+        aria-label={
+          open ? "Close scholarship assistant" : "Open scholarship assistant"
+        }
         className="ml-auto grid size-14 place-items-center rounded-full bg-brand-gradient text-white shadow-glow transition hover:scale-105"
       >
         {open ? <X className="size-6" /> : <MessageCircle className="size-6" />}

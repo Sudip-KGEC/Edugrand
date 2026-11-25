@@ -1,6 +1,8 @@
 import { Scholarship } from "../models/Scholarship.js";
 import { CATEGORIES, LEVELS } from "../models/constants.js";
+import { env } from "../config/env.js";
 import { escapeRegex } from "../utils/slugify.js";
+import { generateReply } from "./gemini.service.js";
 
 const LEVEL_WORDS = {
   School: ["school", "class 10", "class 12", "10th", "12th", "secondary", "high school"],
@@ -31,7 +33,8 @@ const STOPWORDS = new Set([
 
 const SUGGESTIONS = ["Closing soon", "Undergraduate scholarships", "Scholarships for women", "How do I apply?"];
 
-const projection = "title slug amountLabel deadline level country category";
+const cardFields = "title slug amountLabel deadline level country category";
+const contextFields = `${cardFields} provider summary eligibility benefits`;
 
 const has = (text, words) => words.some((word) => text.includes(word));
 
@@ -45,14 +48,6 @@ function openFilter(extra = {}) {
   return { status: "active", deadline: { $gte: today }, ...extra };
 }
 
-async function closingSoon() {
-  const items = await Scholarship.find(openFilter(), projection).sort({ deadline: 1 }).limit(4).lean();
-  if (!items.length) return reply("There are no open scholarships right now. Please check back soon.");
-  return reply("These scholarships have the nearest deadlines. Apply early to avoid last minute issues.", {
-    scholarships: items,
-  });
-}
-
 function detect(text) {
   const levels = LEVELS.filter((level) => has(text, LEVEL_WORDS[level] || []));
   const categories = CATEGORIES.filter((category) => has(text, CATEGORY_WORDS[category] || []));
@@ -60,36 +55,45 @@ function detect(text) {
   return { levels, categories, countries };
 }
 
-async function search(text) {
+async function retrieve(text, fields, limit) {
   const { levels, categories, countries } = detect(text);
   const filter = openFilter();
   if (levels.length) filter.level = { $in: levels };
   if (categories.length) filter.category = { $in: categories };
   if (countries.length) filter.country = { $in: countries };
 
-  const hasFilter = levels.length || categories.length || countries.length;
-  if (!hasFilter) {
+  let matched = Boolean(levels.length || categories.length || countries.length);
+  if (!matched) {
     const words = text
       .split(/[^a-z0-9]+/)
       .filter((word) => word.length > 2 && !STOPWORDS.has(word))
       .slice(0, 5);
-    if (!words.length) return null;
-    filter.$or = words.flatMap((word) => {
-      const pattern = new RegExp(escapeRegex(word), "i");
-      return [{ title: pattern }, { provider: pattern }, { summary: pattern }];
-    });
+    if (words.length) {
+      filter.$or = words.flatMap((word) => {
+        const pattern = new RegExp(escapeRegex(word), "i");
+        return [{ title: pattern }, { provider: pattern }, { summary: pattern }];
+      });
+      matched = true;
+    }
   }
 
-  const items = await Scholarship.find(filter, projection).sort({ deadline: 1 }).limit(4).lean();
-  if (!items.length) return null;
-  return reply(`I found ${items.length} scholarship${items.length > 1 ? "s" : ""} that match. Open one to see eligibility and how to apply.`, {
+  let items = matched ? await Scholarship.find(filter, fields).sort({ deadline: 1 }).limit(limit).lean() : [];
+  if (!items.length) {
+    matched = false;
+    items = await Scholarship.find(openFilter(), fields).sort({ deadline: 1 }).limit(limit).lean();
+  }
+  return { items, matched };
+}
+
+async function closingSoon() {
+  const items = await Scholarship.find(openFilter(), cardFields).sort({ deadline: 1 }).limit(4).lean();
+  if (!items.length) return reply("There are no open scholarships right now. Please check back soon.");
+  return reply("These scholarships have the nearest deadlines. Apply early to avoid last minute issues.", {
     scholarships: items,
   });
 }
 
-export async function answer(message) {
-  const text = message.toLowerCase().trim();
-
+async function ruleAnswer(text) {
   if (/^(hi|hello|hey|hii|namaste|good (morning|afternoon|evening))\b/.test(text)) {
     return reply("Hi! I am the EduGrand assistant. Tell me your course level, country or category and I will find matching scholarships.");
   }
@@ -113,7 +117,45 @@ export async function answer(message) {
     return reply("You are welcome! Best of luck with your applications.");
   }
 
-  const found = await search(text);
-  if (found) return found;
+  const { items, matched } = await retrieve(text, cardFields, 4);
+  if (matched && items.length) {
+    return reply(`I found ${items.length} scholarship${items.length > 1 ? "s" : ""} that match. Open one to see eligibility and how to apply.`, {
+      scholarships: items,
+    });
+  }
   return reply("I could not find an exact match. Try a level such as undergraduate or postgraduate, a country, or a category like women, merit or research.");
+}
+
+export async function answer(message, history = []) {
+  const text = message.toLowerCase().trim();
+
+  if (env.geminiApiKey) {
+    try {
+      const lastUser = [...history].reverse().find((turn) => turn.role === "user");
+      const short = text.split(/\s+/).length <= 4;
+      const searchText = short && lastUser ? `${lastUser.text.toLowerCase()} ${text}` : text;
+      const { items, matched } = await retrieve(searchText, contextFields, 6);
+      const result = await generateReply({ message, history, scholarships: items, matched });
+      return {
+        reply: result.reply,
+        suggestions: result.suggestions.length ? result.suggestions : SUGGESTIONS,
+        scholarships: result.showScholarships
+          ? items.slice(0, 3).map(({ _id, title, slug, amountLabel, deadline, level, country, category }) => ({
+              _id,
+              title,
+              slug,
+              amountLabel,
+              deadline,
+              level,
+              country,
+              category,
+            }))
+          : [],
+      };
+    } catch (error) {
+      console.error("Gemini unavailable, using rule based reply:", error.message);
+    }
+  }
+
+  return ruleAnswer(text);
 }

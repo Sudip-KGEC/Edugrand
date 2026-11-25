@@ -54,6 +54,15 @@ export const newsletterBody = z.object({
 
 export const chatBody = z.object({
   message: z.string().trim().min(1).max(300),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "bot"]),
+        text: z.string().trim().min(1).max(600),
+      }),
+    )
+    .max(10)
+    .default([]),
 });
 
 export const inquiryQuery = z.object({
