@@ -3,8 +3,8 @@ export const SITE = {
   tagline: "Find the scholarship that funds your future",
   description:
     "EduGrand helps students discover verified scholarships, grants and fellowships for school, undergraduate, postgraduate and PhD studies in India and abroad. Search, check eligibility and apply for free.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api",
+  url: process.env.FRONTEND_SITE_URL ?? "http://localhost:3000",
+  apiUrl: process.env.BACKEND_API_URL ?? "http://localhost:5000/api",
   email: "support@edugrand.com",
 } as const;
 
