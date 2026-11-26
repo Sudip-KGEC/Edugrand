@@ -1,120 +1,86 @@
 # EduGrand
 
-Student scholarship portal. Three independent apps in one repository, each deployed as its own Vercel project.
+A full-stack student scholarship portal. Students can search and filter scholarships and get instant answers from an AI chatbot. Admins manage scholarships and student inquiries from a separate dashboard.
 
-```
-edugrand/
-  frontend/   Public website (Next.js 15, Tailwind 4, GSAP)
-  backend/    REST API (Express, MongoDB, JWT)
-  admin/      Admin panel (Vite, React, Tailwind 4)
-```
+## Live Demo
 
-## Structure
+| App | Link |
+| --- | --- |
+| Website | https://edugrand.vercel.app |
+| Admin panel | https://edugrandadmin.vercel.app |
+| API health check | https://edugrandbackend.vercel.app/api/health |
 
-```
-backend/
-  api/index.js            Vercel serverless entry
-  src/
-    config/               env and database connection
-    models/               Mongoose models
-    routes/               URL definitions
-    controllers/          request and response handling
-    services/             business logic
-    middleware/           auth, validation, rate limits, errors
-    validations/          zod schemas
-    seed/                 sample data and admin creation
+**Demo admin login**
 
-frontend/
-  app/                    routes, metadata, sitemap, robots
-  components/             layout, home, scholarship, chatbot, forms, ui
-  services/               API client layer
-  hooks/ lib/ constants/ types/
+- Email: `[admin email]`
+- Password: `[admin password]`
 
-admin/
-  src/pages/              Login, Dashboard, Scholarships, Inquiries
-  src/components/         Layout, Modal, ScholarshipForm
-  src/lib/ context/
-```
+> The backend runs on serverless functions, so the first request after a period of inactivity may take a few seconds.
 
-## Run locally
+## The Problem
 
-Requires Node 20+ and a MongoDB database (local or Atlas).
+Students often struggle to find scholarships that match their level, field and country. Information is scattered across many sites, deadlines are easy to miss, and basic questions can take days to get answered. Organizations that list scholarships also have no simple way to publish and manage them.
 
-```bash
-cd backend
-cp .env.example .env
-npm install
-npm run seed
-npm run dev
+## The Solution
 
-cd ../frontend
-cp .env.example .env.local
-npm install
-npm run dev
+- **For students:** a fast, searchable scholarship directory with filters, detail pages, a contact form, a newsletter, and an AI chatbot that answers questions 24/7.
+- **For admins:** a protected dashboard to add, edit and delete scholarships, track stats, and review student inquiries without touching the database.
 
-cd ../admin
-cp .env.example .env
-npm install
-npm run dev
-```
+## Features
 
-- Website: http://localhost:3000
-- API: http://localhost:5000/api/health
-- Admin: http://localhost:5173 (sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the backend `.env`)
+**Website (students)**
 
-`npm run seed` is safe to run again. It updates the sample scholarships and the admin account.
+- Search and filter scholarships by keyword, level, category, country and featured status, with sorting and pagination
+- Scholarship detail pages with deadline, eligibility and provider information
+- Expired scholarships are automatically removed from listings
+- AI chatbot (Google Gemini) for instant answers
+- Contact and newsletter forms
+- Filters are plain GET forms, so search works even without JavaScript
 
-## Deploy to Vercel
+**Admin panel**
 
-Create three Vercel projects from the same repository and set the **Root Directory** for each one.
+- JWT login with protected routes
+- Dashboard with key stats
+- Full CRUD for scholarships
+- Inquiry management (view, update status, delete)
 
-| Project  | Root directory | Environment variables |
-| -------- | -------------- | --------------------- |
-| backend  | `backend`      | `MONGODB_URI`, `JWT_SECRET`, `CLIENT_ORIGINS` |
-| frontend | `frontend`     | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL` |
-| admin    | `admin`        | `VITE_API_URL` |
+**SEO and performance**
 
-Order of setup:
+- Static generation with revalidation (home and detail pages every 5 minutes)
+- Per-page metadata, canonical URLs, Open Graph, `sitemap.xml`, `robots.txt`, web manifest
+- JSON-LD structured data (Organization, WebSite search, FAQ, ItemList, BreadcrumbList)
+- Self-hosted fonts, GSAP loaded on demand, chatbot loaded after the page is idle
+- Cache headers on API responses
 
-1. Deploy `backend`. Set `CLIENT_ORIGINS` to your website and admin URLs, comma separated, with no trailing slash.
-2. Run `npm run seed` once on your machine with the production `MONGODB_URI` and your chosen `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
-3. Deploy `frontend` with `NEXT_PUBLIC_API_URL=https://your-backend.vercel.app/api` and `NEXT_PUBLIC_SITE_URL=https://your-domain.com`.
-4. Deploy `admin` with `VITE_API_URL=https://your-backend.vercel.app/api`.
+## Tech Stack
 
-If you use MongoDB Atlas, allow Vercel's IP range (or `0.0.0.0/0`) in Network Access.
+| Layer | Technology |
+| --- | --- |
+| Website | Next.js 15, TypeScript, Tailwind CSS 4, GSAP |
+| Admin panel | React, Vite, Tailwind CSS 4 |
+| Backend | Node.js, Express |
+| Database | MongoDB with Mongoose |
+| Auth | JWT, role-based admin access |
+| Validation | Zod |
+| AI | Google Gemini API (called from the backend, so the key never reaches the browser) |
+| Deployment | Vercel (three separate projects) |
 
-## API
+## Key Technical Decisions
 
-Public
+- **Separate deployments:** website, admin and API scale and deploy independently.
+- **Layered backend:** controllers handle HTTP, services hold business logic, and Zod schemas validate input at the edge.
+- **Secure AI integration:** the chatbot calls a backend `/api/chat` endpoint, which talks to Gemini, keeping the API key server-side.
+- **CORS allowlist:** only the configured website and admin origins can call the API (driven by the `CLIENT_ORIGINS` env variable).
+- **Rate limiting and centralized error handling** middleware on the API.
+- **Static generation with revalidation** for fast pages and good SEO.
 
-- `GET /api/scholarships` filters: `q`, `level`, `category`, `country`, `featured`, `sort`, `page`, `limit`
-- `GET /api/scholarships/meta` available filter values
-- `GET /api/scholarships/slugs` used by the sitemap
-- `GET /api/scholarships/:slug`
-- `POST /api/inquiries/contact`
-- `POST /api/inquiries/newsletter`
-- `POST /api/chat`
-- `GET /api/health`
+## Notes
 
-Admin (Bearer token)
+- Scholarship data in the demo is sample data with example providers.
+- Some stats and the contact email on the site are placeholders.
+- The demo admin account is for review purposes only.
 
-- `POST /api/auth/login`, `GET /api/auth/me`
-- `GET /api/admin/stats`
-- `GET POST /api/admin/scholarships`, `GET PUT DELETE /api/admin/scholarships/:id`
-- `GET /api/admin/inquiries`, `PATCH DELETE /api/admin/inquiries/:id`
+## Author
 
-## Performance and SEO
-
-- Pages are statically generated and revalidated (home 5 min, detail 5 min), API responses carry cache headers
-- Fonts are self hosted, GSAP loads on demand, the chatbot loads after the page is idle
-- Per page metadata, canonical URLs, Open Graph, `sitemap.xml`, `robots.txt`, web manifest
-- JSON-LD for Organization, WebSite search, FAQ, ItemList and BreadcrumbList
-- Search and filters are plain GET forms, so they work without JavaScript
-- Expired scholarships drop out of listings automatically
-
-## Before you go live
-
-- The numbers in `frontend/constants/home.ts` (`STATS`) and the contact email in `frontend/constants/site.ts` are placeholders. Replace them with real values
-- Seed scholarships are sample data with example providers. Replace them from the admin panel
-- Change `ADMIN_PASSWORD` and set a long random `JWT_SECRET`
-- Review the privacy policy and terms text with a legal advisor
+**[ Sudip ]**
+[contact.sudipdas01@gmail.com]
