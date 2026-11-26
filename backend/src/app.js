@@ -13,17 +13,18 @@ app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
 app.use(helmet());
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin || env.clientOrigins.includes(origin)) return callback(null, true);
-      callback(null, false);
-    },
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    maxAge: 86400,
-  }),
-);
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || env.clientOrigins.includes(origin)) return callback(null, true);
+    callback(null, false);
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  maxAge: 86400,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); 
 app.use(compression());
 app.use(express.json({ limit: "100kb" }));
 app.use(apiLimiter);

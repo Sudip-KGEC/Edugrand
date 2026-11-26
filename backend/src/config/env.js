@@ -1,7 +1,7 @@
 
 import "dotenv/config";
 
-const list = (value, fallback) =>
+const list = (value, fallback = "") =>
   (value || fallback)
     .split(",")
     .map((item) => item.trim().replace(/\/$/, ""))
@@ -15,8 +15,9 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET || "",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
 
-  clientOrigins: list(
-    process.env.CLIENT_ORIGINS
+   clientOrigins: list(
+    process.env.CLIENT_ORIGINS,
+    "http://localhost:3000,http://localhost:5173,https://edugrand.vercel.app,https://edugrandadmin.vercel.app"
   ),
 
   adminEmail: process.env.ADMIN_EMAIL || "",
